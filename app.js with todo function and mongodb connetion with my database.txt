@@ -1,0 +1,99 @@
+const express = require('express');
+const mongoose = require('mongoose');
+
+const app = express();
+
+// Define the Mongoose schema for Todo
+const todoSchema = new mongoose.Schema({
+    taskName: String
+});
+
+// Create the Todo model
+const Todo = mongoose.model('Todo', todoSchema);
+
+// Middleware to parse request body
+app.use(express.urlencoded({ extended: true }));
+
+// Connect to MongoDB
+mongoose.connect('mongodb+srv://vikasdb:vikas1234@cluster0.ni5rb3r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+    .then(() => {
+        console.log('Connected to MongoDB');
+    })
+    .catch(err => console.error('Could not connect to MongoDB', err));
+
+// Route to handle POST requests to create a new todo item
+app.post('/todos', async (req, res) => {
+    // Extract task name from request body
+    const taskName = req.body.taskName;
+
+    try {
+        // Create a new Todo instance with the extracted task name
+        const todo = new Todo({ taskName });
+
+        // Save the new todo item to the database
+        const result = await todo.save();
+
+        // Send a response indicating that the todo item has been successfully added
+        res.status(201).json({ message: 'Todo item added successfully', todo: result });
+    } catch (error) {
+        // If an error occurs, send an error response
+        console.error('Error adding todo item:', error);
+        res.status(500).json({ error: 'Failed to add todo item' });
+    }
+});
+
+// Route to handle GET requests to retrieve all todo items
+app.get('/todos', async (req, res) => {
+    try {
+        // Retrieve all todo items from the database
+        const todos = await Todo.find();
+
+        // Send the retrieved todo items as a JSON response
+        res.json(todos);
+    } catch (error) {
+        // If an error occurs, send an error response
+        console.error('Error retrieving todo items:', error);
+        res.status(500).json({ error: 'Failed to retrieve todo items' });
+    }
+});
+
+// Route to handle DELETE requests to delete a todo item by ID
+app.delete('/todos/:id', async (req, res) => {
+    const id = req.params.id;
+
+    try {
+        // Find the todo item by ID and delete it
+        const result = await Todo.findByIdAndDelete(id);
+
+        // Send a response indicating that the todo item has been successfully deleted
+        res.json({ message: 'Todo item deleted successfully', todo: result });
+    } catch (error) {
+        // If an error occurs, send an error response
+        console.error('Error deleting todo item:', error);
+        res.status(500).json({ error: 'Failed to delete todo item' });
+    }
+});
+
+// Route to handle PUT requests to update a todo item by ID
+app.put('/todos/:id', async (req, res) => {
+    const id = req.params.id;
+    const updatedTaskName = req.body.taskName;
+
+    try {
+        // Find the todo item by ID and update its taskName
+        const result = await Todo.findByIdAndUpdate(id, { taskName: updatedTaskName }, { new: true });
+
+        // Send a response indicating that the todo item has been successfully updated
+        res.json({ message: 'Todo item updated successfully', todo: result });
+    } catch (error) {
+        // If an error occurs, send an error response
+        console.error('Error updating todo item:', error);
+        res.status(500).json({ error: 'Failed to update todo item' });
+    }
+});
+
+// Start the Express server
+const PORT = process.env.PORT || 3001; // Change the port number to 3001
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
